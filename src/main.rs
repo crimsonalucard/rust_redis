@@ -1,3 +1,3 @@
 mod resp_parser;
-
-fn main(){}
+fn main(){
+}
