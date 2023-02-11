@@ -1,5 +1,4 @@
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum RespType<'a> {
     SimpleString(&'a str),
     RespError((&'a str, &'a str)),
@@ -147,7 +146,7 @@ pub fn parse_resp(input_string: &str) -> std::result::Result<std::vec::Vec<RespT
 
 #[test]
 fn test_resp_string() {
-    for token in parse_resp("*5\r\n$0\r\n\r\n:1234\r\n+OK\r\n-wrong hello world\r\n*2\r\n+HOLA\r\n+OK\r\n").unwrap() {
+    for token in parse_resp("*5\r\n$0\r\n\r\n:1234\r\n+OK\r\n-wrong hello world\r\n*3\r\n+HOLA\r\n+OK\r\n$2\r\nOK\r\n").unwrap() {
         println!("{}", token);
     }
 }
