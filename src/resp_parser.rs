@@ -1,10 +1,11 @@
 #[derive(Debug)]
+#[derive(PartialEq, Eq)]
 pub enum RespType<'a> {
     SimpleString(&'a str),
     RespError((&'a str, &'a str)),
     Integer(i32),
     BulkString(Option<&'a str>),
-    Array(std::vec::Vec<Box<RespType<'a>>>),
+    Array(Vec<Box<RespType<'a>>>),
 }
 
 impl std::fmt::Display for RespType<'_> {
@@ -144,10 +145,72 @@ pub fn parse_resp(input_string: &str) -> std::result::Result<std::vec::Vec<RespT
     parse_token_strings(token_strings)
 }
 
+fn serialize_one(resp_token: &RespType) -> Result<String, &'static str> {
+    match resp_token {
+        RespType::SimpleString(string) => Ok("+".to_string() + string),
+        RespType::Integer(number) => {
+            Ok(":".to_owned() + &(number.to_string()))
+        }
+        RespType::RespError((error_type, error_message)) =>
+            Ok("-".to_owned() + error_type + " " + error_message),
+        RespType::BulkString(None) => Ok("$-1".to_owned()),
+        RespType::BulkString(Some(string)) =>
+            Ok("$".to_owned() + &(string.len().to_string()) + "\r\n" + string),
+        RespType::Array(vector) => {
+            let prefix = "*".to_owned() + &(vector.len().to_string()) + "\r\n";
+            let suffix = vector.iter().map(|value| {
+                match serialize_one(&(**value)) {
+                    Ok(string) => string,
+                    Err(e) => {
+                        panic!("Issue involving inner array: {}", e);
+                    }
+                }
+            }).collect::<Vec<String>>().join("\r\n");
+            Ok(prefix + &suffix)
+        }
+    }
+}
+
+pub fn serialize(resp_tokens: &std::vec::Vec<RespType>) -> Result<String, &'static str> {
+    let mut acc = "".to_owned();
+    for token in resp_tokens {
+        let next_string = match serialize_one(token) {
+            Ok(string) => string,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        acc += &next_string;
+    }
+    Ok(acc + "\r\n")
+}
+
 #[test]
 fn test_resp_string() {
-    for token in parse_resp("*5\r\n$0\r\n\r\n:1234\r\n+OK\r\n-wrong hello world\r\n*3\r\n+HOLA\r\n+OK\r\n$2\r\nOK\r\n").unwrap() {
+    let test_token = RespType::Array(
+        vec![
+            Box::new(RespType::BulkString(Some(""))),
+            Box::new(RespType::Integer(1234)),
+            Box::new(RespType::SimpleString("OK")),
+            Box::new(RespType::RespError(("wrong", "hello world"))),
+            Box::new(RespType::Array(
+                vec![
+                    Box::new(RespType::SimpleString("HOLA")),
+                    Box::new(RespType::SimpleString("OK")),
+                    Box::new(RespType::BulkString(Some("OK"))),
+                ]
+            )),
+        ]
+    );
+    let test_tokens = vec![test_token];
+    let test_string = "*5\r\n$0\r\n\r\n:1234\r\n+OK\r\n-wrong hello world\r\n*3\r\n+HOLA\r\n+OK\r\n$2\r\nOK\r\n";
+    assert_eq!(test_tokens, parse_resp(test_string).unwrap());
+    assert_eq!(serialize(&test_tokens).unwrap(), test_string);
+
+
+    for (index, token) in parse_resp(test_string).unwrap().iter().enumerate() {
         println!("{}", token);
+        // assert_eq!(test_token, token);
     }
 }
 

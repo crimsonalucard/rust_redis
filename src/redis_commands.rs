@@ -17,7 +17,7 @@ fn execute_command(command: RespType) -> std::result::Result<RespType, &'static 
     }
 }
 
-fn handle_command(command_type: RespType, paramters: Vec<Box<RespType>>) -> std::result::Result<RespType, &'static str> {
+fn handle_command<'a>(command_type: RespType, paramters: Vec<Box<RespType<'a>>>) -> std::result::Result<RespType<'a>, &'static str> {
     match command_type {
         RespType::BulkString(optional_command_string) => {
             match optional_command_string {
