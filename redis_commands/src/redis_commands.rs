@@ -1,6 +1,6 @@
 use crate::resp_parser::RespType;
 
-fn execute_command(command: RespType) -> std::result::Result<RespType, &'static str> {
+pub fn execute_command(command: RespType) -> std::result::Result<RespType, &'static str> {
     match command {
         RespType::Array(mut elements) => {
             if elements.len() == 0 {
