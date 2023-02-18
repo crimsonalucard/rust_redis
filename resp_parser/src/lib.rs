@@ -196,7 +196,7 @@ pub fn serialize_resp(resp_tokens: &std::vec::Vec<RespType>) -> Result<String, &
 
 #[cfg(test)]
 pub mod tests {
-    use {parse_resp, serialize_resp, RespType};
+    use {crate::parse_resp, crate::serialize_resp, crate::RespType};
 
     #[test]
     fn test_resp_string() {
