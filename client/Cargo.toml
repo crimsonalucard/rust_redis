@@ -1,0 +1,9 @@
+[package]
+name = "redis_client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+resp_parser = { path = "../resp_parser" }
+redis_commands = { path = "../redis_commands" }
+tokio = { version = "1.25.0", features = ["full"] }

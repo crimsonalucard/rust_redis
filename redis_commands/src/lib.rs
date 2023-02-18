@@ -1,5 +1,16 @@
 extern crate resp_parser;
+
 use self::resp_parser::RespType;
+use resp_parser::RespType::BulkString;
+
+pub fn cli_tokens_to_resp(cli_tokens: Vec<&str>) -> RespType {
+    let mut acc: Vec<Box<RespType>> = vec![];
+    for string in cli_tokens {
+        acc.push(Box::new(BulkString(Some(string))))
+    }
+    RespType::Array(acc)
+}
+
 pub fn execute_command(command: RespType) -> Result<RespType, &'static str> {
     match command {
         RespType::Array(mut elements) => {

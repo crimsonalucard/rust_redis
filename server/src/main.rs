@@ -13,12 +13,12 @@ async fn main() {
     if args.len() != 2 {
         panic!("Only one argument required to run. Please write port number");
     }
-    let port = args[2].parse::<u16>().unwrap();
+    let port = args[1].parse::<u16>().unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await.unwrap();
     loop {
         let (socket, _) = listener.accept().await.unwrap();
-        process(socket).await
+        let handle = tokio::spawn(async move { process(socket).await });
     }
 }
 
@@ -28,5 +28,6 @@ async fn process(mut socket: TcpStream) {
     let string = from_utf8(&buffer).unwrap();
     let tokens = parse_resp(string).unwrap();
     let echo = serialize_resp(&tokens).unwrap();
+    println!("{}", echo);
     socket.write(echo.as_bytes()).await.unwrap();
 }

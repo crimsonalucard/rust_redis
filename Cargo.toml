@@ -4,4 +4,5 @@ members = [
     "server",
     "resp_parser",
     "redis_commands",
+    "client"
 ]
