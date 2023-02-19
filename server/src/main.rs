@@ -1,5 +1,6 @@
 extern crate tokio;
 
+use redis_commands::handle_resp_token;
 use resp_parser::{parse_resp, serialize_resp};
 use std::env;
 use std::net::SocketAddr;
@@ -16,10 +17,9 @@ async fn main() {
     let port = args[1].parse::<u16>().unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await.unwrap();
-    let sockets: Vec<TcpStream> = vec![];
     loop {
         let (socket, _) = listener.accept().await.unwrap();
-        let handle = tokio::spawn(async move { process(socket).await });
+        let _handle = tokio::spawn(async move { process(socket).await });
     }
 }
 
@@ -28,8 +28,10 @@ async fn process(mut socket: TcpStream) {
     let size = socket.read(&mut buffer).await.unwrap();
     let string = from_utf8(&buffer[..size]).unwrap();
     let tokens = parse_resp(string).unwrap();
-    let echo = serialize_resp(&tokens).unwrap();
-    println!("{}", echo);
-    socket.write(echo.as_bytes()).await.unwrap();
+    // let echo = serialize_resp(&tokens).unwrap();
+    // println!("{}", echo);
+    let resp_response_token = handle_resp_token(&tokens[0]);
+    let serialized_response = serialize_resp(&vec![resp_response_token]).unwrap();
+    socket.write(serialized_response.as_bytes()).await.unwrap();
     socket.shutdown().await.unwrap();
 }

@@ -7,7 +7,7 @@ enum Command<'a> {
     PING(&'a str),
 }
 
-fn resp_to_command(command: RespType) -> Result<Command, &'static str> {
+fn resp_to_command<'a>(command: &'a RespType) -> Result<Command<'a>, &'static str> {
     match command {
         RespType::Array(elements) => {
             if elements.len() == 0 {
@@ -43,6 +43,6 @@ fn execute_command<'a>(command: Result<Command<'a>, &'a str>) -> RespType<'a> {
     }
 }
 
-pub fn handle_resp_token(resp_token: RespType) -> RespType {
+pub fn handle_resp_token<'a>(resp_token: &'a RespType<'a>) -> RespType<'a> {
     execute_command(resp_to_command(resp_token))
 }
