@@ -1,9 +1,9 @@
 use redis_commands::cli_tokens_to_resp;
-use resp_parser::serialize_resp;
+use resp_parser::{parse_resp, serialize_resp};
 use std::env;
 use std::io;
 use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpStream};
 // use tokio::net::TcpListener;
 
 fn main() {
@@ -21,13 +21,39 @@ fn main() {
         io::stdout().flush().unwrap();
         let mut line = String::new();
         io::stdin().read_line(&mut line).unwrap();
-        let cli_tokens = line.split(" ").collect::<Vec<&str>>();
+        let trimmed_line = line.trim();
+        let cli_tokens = trimmed_line.split(" ").collect::<Vec<&str>>();
         let resp_token = cli_tokens_to_resp(cli_tokens);
         let tokens = vec![resp_token];
         let serialized_resp = serialize_resp(&tokens).unwrap();
         let serialized_resp_bytes = serialized_resp.as_bytes();
-        stream.write(serialized_resp_bytes).unwrap();
-        stream.read(&mut read_buffer[0..]).unwrap();
-        println!("{}", std::str::from_utf8(&read_buffer).unwrap()); // dbg!(cli_tokens);
+
+        loop {
+            match (
+                stream.write(serialized_resp_bytes),
+                stream.read(&mut read_buffer[0..]),
+            ) {
+                (Ok(_written_size), Ok(recieved_size)) => {
+                    let resp_response_string =
+                        std::str::from_utf8(&read_buffer[..recieved_size]).unwrap();
+                    let resp_response_tokens = parse_resp(resp_response_string).unwrap();
+                    println!("{}", resp_response_tokens[0]);
+                    break;
+                }
+                (Ok(_), Err(e)) => {
+                    println!("error on receive: {}", e.to_string());
+                    stream = TcpStream::connect(addr).unwrap();
+                }
+                (Err(e), Ok(_)) => {
+                    println!("error on write: {}", e.to_string());
+                    stream = TcpStream::connect(addr).unwrap();
+                }
+                (Err(e1), Err(e2)) => {
+                    println!("error on receive: {}", e1.to_string());
+                    println!("error on receive: {}", e2.to_string());
+                    stream = TcpStream::connect(addr).unwrap();
+                }
+            }
+        }
     }
 }

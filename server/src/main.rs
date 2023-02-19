@@ -16,6 +16,7 @@ async fn main() {
     let port = args[1].parse::<u16>().unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await.unwrap();
+    let sockets: Vec<TcpStream> = vec![];
     loop {
         let (socket, _) = listener.accept().await.unwrap();
         let handle = tokio::spawn(async move { process(socket).await });
@@ -24,10 +25,11 @@ async fn main() {
 
 async fn process(mut socket: TcpStream) {
     let mut buffer: [u8; 64] = [0; 64];
-    socket.read(&mut buffer).await.unwrap();
-    let string = from_utf8(&buffer).unwrap();
+    let size = socket.read(&mut buffer).await.unwrap();
+    let string = from_utf8(&buffer[..size]).unwrap();
     let tokens = parse_resp(string).unwrap();
     let echo = serialize_resp(&tokens).unwrap();
     println!("{}", echo);
     socket.write(echo.as_bytes()).await.unwrap();
+    socket.shutdown().await.unwrap();
 }
