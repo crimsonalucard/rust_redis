@@ -1,43 +1,48 @@
 extern crate resp_parser;
 
 use self::resp_parser::RespType;
-use resp_parser::RespType::BulkString;
+use resp_parser::RespType::{BulkString, RespError};
 
-pub fn cli_tokens_to_resp(cli_tokens: Vec<&str>) -> RespType {
-    let mut acc: Vec<Box<RespType>> = vec![];
-    for string in cli_tokens {
-        acc.push(Box::new(BulkString(Some(string))))
-    }
-    RespType::Array(acc)
+enum Command<'a> {
+    PING(&'a str),
 }
 
-pub fn execute_command(command: RespType) -> Result<RespType, &'static str> {
+fn resp_to_command(command: RespType) -> Result<Command, &'static str> {
     match command {
-        RespType::Array(mut elements) => {
+        RespType::Array(elements) => {
             if elements.len() == 0 {
                 Err("commands require an array length of one or more.")
             } else {
-                let command_type = *(elements.remove(0));
-                let parameters = elements;
-                handle_command(command_type, parameters)
+                let parameters = &elements[1..];
+                match *(elements[0]) {
+                    BulkString(Some("PING")) => {
+                        if parameters.len() == 0 {
+                            Ok(Command::PING("PONG"))
+                        } else if parameters.len() == 1 {
+                            match *parameters[0] {
+                                BulkString(Some(ping_message)) => Ok(Command::PING(ping_message)),
+                                _ => Err("invalid resp type in parameter for 'ping'"),
+                            }
+                        } else {
+                            Err("wrong number of arguments for 'ping' command")
+                        }
+                    }
+                    _ => Err("unsupported command"),
+                }
             }
         }
         _ => Err("Invalid command. Command must be an array."),
     }
 }
 
-fn handle_command<'a>(
-    command_type: RespType,
-    _parameters: Vec<Box<RespType<'a>>>,
-) -> std::result::Result<RespType<'a>, &'static str> {
-    match command_type {
-        RespType::BulkString(optional_command_string) => match optional_command_string {
-            Some(command_string) => match command_string {
-                "PING" => Ok(RespType::SimpleString("PONG")),
-                _ => Err("command not recognized."),
-            },
-            None => Err("first part of command cannot be a null"),
-        },
-        _ => Err("All commands and command parameters must be bulk strings"),
+//execution of command should happen here.
+fn execute_command<'a>(command: Result<Command<'a>, &'a str>) -> RespType<'a> {
+    match command {
+        Ok(Command::PING(arg)) => BulkString(Some(arg)),
+        Err(e) => RespError(("ERR", e)),
     }
+}
+
+pub fn handle_resp_token(resp_token: RespType) -> RespType {
+    execute_command(resp_to_command(resp_token))
 }

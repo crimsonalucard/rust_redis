@@ -221,3 +221,11 @@ pub mod tests {
         }
     }
 }
+
+pub fn cli_tokens_to_resp(cli_tokens: Vec<&str>) -> RespType {
+    let mut acc: Vec<Box<RespType>> = vec![];
+    for string in cli_tokens {
+        acc.push(Box::new(RespType::BulkString(Some(string))))
+    }
+    RespType::Array(acc)
+}

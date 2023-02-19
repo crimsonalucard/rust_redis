@@ -1,4 +1,4 @@
-use redis_commands::cli_tokens_to_resp;
+use resp_parser::cli_tokens_to_resp;
 use resp_parser::{parse_resp, serialize_resp};
 use std::env;
 use std::io;
