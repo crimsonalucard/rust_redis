@@ -4,7 +4,7 @@ pub enum RespType<'a> {
     RespError((&'a str, &'a str)),
     Integer(i32),
     BulkString(Option<&'a str>),
-    Array(Vec<Box<RespType<'a>>>),
+    Array(Vec<RespType<'a>>),
 }
 
 impl std::fmt::Display for RespType<'_> {
@@ -101,12 +101,12 @@ fn parse_one_resp_token<'a>(
             // let expected_array_length = std::from_str::<i32>(command_info);
             match command_info.parse::<usize>() {
                 Ok(expected_array_length) => {
-                    let mut acc: std::vec::Vec<Box<RespType>> = std::vec::Vec::new();
+                    let mut acc: std::vec::Vec<RespType> = std::vec::Vec::new();
                     let mut tail = token_strings;
                     for _ in 0..expected_array_length {
                         match parse_one_resp_token(tail) {
                             Ok((token, _tail)) => {
-                                acc.push(Box::new(token));
+                                acc.push(token);
                                 tail = _tail;
                             }
                             Err(error_string) => {
@@ -168,7 +168,7 @@ fn serialize_one_resp(resp_token: &RespType) -> Result<String, &'static str> {
             let prefix = "*".to_owned() + &(vector.len().to_string()) + "\r\n";
             let mut suffix = "".to_owned();
             for token in vector {
-                match serialize_one_resp(&(**token)) {
+                match serialize_one_resp(token) {
                     Ok(string) => suffix += &string,
                     Err(e) => {
                         return Err(e);
@@ -201,15 +201,15 @@ pub mod tests {
     #[test]
     fn test_resp_string() {
         let test_token = RespType::Array(vec![
-            Box::new(RespType::BulkString(Some(""))),
-            Box::new(RespType::Integer(1234)),
-            Box::new(RespType::SimpleString("OK")),
-            Box::new(RespType::RespError(("wrong", "hello world"))),
-            Box::new(RespType::Array(vec![
-                Box::new(RespType::SimpleString("HOLA")),
-                Box::new(RespType::SimpleString("OK")),
-                Box::new(RespType::BulkString(Some("OK"))),
-            ])),
+            RespType::BulkString(Some("")),
+            RespType::Integer(1234),
+            RespType::SimpleString("OK"),
+            RespType::RespError(("wrong", "hello world")),
+            RespType::Array(vec![
+                RespType::SimpleString("HOLA"),
+                RespType::SimpleString("OK"),
+                RespType::BulkString(Some("OK")),
+            ]),
         ]);
         let test_tokens = vec![test_token];
         let test_string = "*5\r\n$0\r\n\r\n:1234\r\n+OK\r\n-wrong hello world\r\n*3\r\n+HOLA\r\n+OK\r\n$2\r\nOK\r\n";
@@ -223,9 +223,9 @@ pub mod tests {
 }
 
 pub fn cli_tokens_to_resp(cli_tokens: Vec<&str>) -> RespType {
-    let mut acc: Vec<Box<RespType>> = vec![];
+    let mut acc: Vec<RespType> = vec![];
     for string in cli_tokens {
-        acc.push(Box::new(RespType::BulkString(Some(string))))
+        acc.push(RespType::BulkString(Some(string)))
     }
     RespType::Array(acc)
 }

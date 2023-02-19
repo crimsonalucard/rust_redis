@@ -14,12 +14,12 @@ fn resp_to_command<'a>(command: &'a RespType) -> Result<Command<'a>, &'static st
                 Err("commands require an array length of one or more.")
             } else {
                 let parameters = &elements[1..];
-                match *(elements[0]) {
+                match elements[0] {
                     BulkString(Some("PING")) => {
                         if parameters.len() == 0 {
                             Ok(Command::PING("PONG"))
                         } else if parameters.len() == 1 {
-                            match *parameters[0] {
+                            match parameters[0] {
                                 BulkString(Some(ping_message)) => Ok(Command::PING(ping_message)),
                                 _ => Err("invalid resp type in parameter for 'ping'"),
                             }
