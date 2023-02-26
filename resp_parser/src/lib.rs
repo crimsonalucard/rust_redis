@@ -125,8 +125,8 @@ fn parse_one_resp_token<'a>(
 
 fn _parse_token_strings<'a>(
     token_strings: std::collections::VecDeque<&'a str>,
-    mut acc: std::vec::Vec<RespType<'a>>,
-) -> std::result::Result<std::vec::Vec<RespType<'a>>, &'static str> {
+    mut acc: Vec<RespType<'a>>,
+) -> std::result::Result<Vec<RespType<'a>>, &'static str> {
     if token_strings.len() == 0 {
         Ok(acc)
     } else {
@@ -142,53 +142,41 @@ fn _parse_token_strings<'a>(
 
 fn parse_token_strings(
     token_strings: std::collections::VecDeque<&str>,
-) -> std::result::Result<std::vec::Vec<RespType>, &'static str> {
-    _parse_token_strings(token_strings, std::vec::Vec::new())
+) -> Result<Vec<RespType>, &'static str> {
+    _parse_token_strings(token_strings, Vec::new())
 }
 
-pub fn parse_resp(
-    input_string: &str,
-) -> std::result::Result<std::vec::Vec<RespType>, &'static str> {
+pub fn parse_resp(input_string: &str) -> Result<Vec<RespType>, &'static str> {
     let token_strings = tokenize_resp_string(input_string);
     parse_token_strings(token_strings)
 }
 
-fn serialize_one_resp(resp_token: &RespType) -> Result<String, &'static str> {
+pub fn serialize_one_resp(resp_token: &RespType) -> String {
     match resp_token {
-        RespType::SimpleString(string) => Ok("+".to_string() + string + "\r\n"),
-        RespType::Integer(number) => Ok(":".to_owned() + &(number.to_string()) + "\r\n"),
+        RespType::SimpleString(string) => "+".to_string() + string + "\r\n",
+        RespType::Integer(number) => ":".to_owned() + &(number.to_string()) + "\r\n",
         RespType::RespError((error_type, error_message)) => {
-            Ok("-".to_owned() + error_type + " " + error_message + "\r\n")
+            "-".to_owned() + error_type + " " + error_message + "\r\n"
         }
-        RespType::BulkString(None) => Ok("$-1".to_owned() + "\r\n\r\n"),
+        RespType::BulkString(None) => "$-1".to_owned() + "\r\n\r\n",
         RespType::BulkString(Some(string)) => {
-            Ok("$".to_owned() + &(string.len().to_string()) + "\r\n" + string + "\r\n")
+            "$".to_owned() + &(string.len().to_string()) + "\r\n" + string + "\r\n"
         }
         RespType::Array(vector) => {
             let prefix = "*".to_owned() + &(vector.len().to_string()) + "\r\n";
             let mut suffix = "".to_owned();
             for token in vector {
-                match serialize_one_resp(token) {
-                    Ok(string) => suffix += &string,
-                    Err(e) => {
-                        return Err(e);
-                    }
-                }
+                suffix += &serialize_one_resp(token);
             }
-            Ok(prefix + &suffix)
+            prefix + &suffix
         }
     }
 }
 
-pub fn serialize_resp(resp_tokens: &std::vec::Vec<RespType>) -> Result<String, &'static str> {
+pub fn serialize_resp(resp_tokens: &[RespType]) -> Result<String, &'static str> {
     let mut acc = "".to_owned();
     for token in resp_tokens {
-        let next_string = match serialize_one_resp(token) {
-            Ok(string) => string,
-            Err(e) => {
-                return Err(e);
-            }
-        };
+        let next_string = serialize_one_resp(token);
         acc += &next_string;
     }
     Ok(acc)

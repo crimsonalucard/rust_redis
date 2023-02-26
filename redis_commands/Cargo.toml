@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 resp_parser = {path = "../resp_parser"}
+database = {path = "../database"}

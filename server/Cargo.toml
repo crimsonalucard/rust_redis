@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 resp_parser = { path = "../resp_parser" }
 redis_commands = { path = "../redis_commands" }
+database = { path = "../database" }
 tokio = { version = "1.25.0", features = ["full"] }
